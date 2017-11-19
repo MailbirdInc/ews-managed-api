@@ -29,6 +29,7 @@ namespace Microsoft.Exchange.WebServices.Data
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
+    using System.Threading;
 
     /// <summary>
     /// Represents a file attachment.
@@ -40,6 +41,7 @@ namespace Microsoft.Exchange.WebServices.Data
         private byte[] content;
         private Stream loadToStream;
         private bool isContactPhoto;
+        private CancellationToken? cancelToken;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileAttachment"/> class.
@@ -99,7 +101,7 @@ namespace Microsoft.Exchange.WebServices.Data
                 {
                     if (this.loadToStream != null)
                     {
-                        reader.ReadBase64ElementValue(this.loadToStream);
+                        reader.ReadBase64ElementValue(this.loadToStream, cancelToken);
                     }
                     else
                     {
@@ -187,9 +189,11 @@ namespace Microsoft.Exchange.WebServices.Data
         /// Loads the content of the file attachment into the specified stream. Calling this method results in a call to EWS.
         /// </summary>
         /// <param name="stream">The stream to load the content of the attachment into.</param>
-        public void Load(Stream stream)
+        /// <param name="cancelToken">Download cancellation token.</param>
+        public void Load(Stream stream, CancellationToken? token = null)
         {
             this.loadToStream = stream;
+            this.cancelToken = token;
 
             try
             {
@@ -198,6 +202,7 @@ namespace Microsoft.Exchange.WebServices.Data
             finally
             {
                 this.loadToStream = null;
+                this.cancelToken = null;
             }
         }
 
@@ -205,9 +210,11 @@ namespace Microsoft.Exchange.WebServices.Data
         /// Loads the content of the file attachment into the specified file. Calling this method results in a call to EWS.
         /// </summary>
         /// <param name="fileName">The name of the file to load the content of the attachment into. If the file already exists, it is overwritten.</param>
-        public void Load(string fileName)
+        /// <param name="cancelToken">Download cancellation token.</param>
+        public void Load(string fileName, CancellationToken? token = null)
         {
             this.loadToStream = new FileStream(fileName, FileMode.Create);
+            this.cancelToken = token;
 
             try
             {
@@ -217,6 +224,7 @@ namespace Microsoft.Exchange.WebServices.Data
             {
                 this.loadToStream.Dispose();
                 this.loadToStream = null;
+                this.cancelToken = null;
             }
 
             this.fileName = fileName;

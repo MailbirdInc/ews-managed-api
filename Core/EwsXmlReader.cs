@@ -29,6 +29,7 @@ namespace Microsoft.Exchange.WebServices.Data
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
+    using System.Threading;
     using System.Xml;
 
     /// <summary>
@@ -433,7 +434,8 @@ namespace Microsoft.Exchange.WebServices.Data
         /// Reads the base64 element value.
         /// </summary>
         /// <param name="outputStream">The output stream.</param>
-        public void ReadBase64ElementValue(Stream outputStream)
+        /// <param name="cancelToken">Download cancellation token.</param>
+        public void ReadBase64ElementValue(Stream outputStream, CancellationToken? cancelToken = null)
         {
             this.EnsureCurrentNodeIsStartElement();
 
@@ -448,6 +450,9 @@ namespace Microsoft.Exchange.WebServices.Data
                 {
                     outputStream.Write(buffer, 0, bytesRead);
                 }
+
+                if (cancelToken.HasValue && cancelToken.Value.IsCancellationRequested)
+                    break;
             }
             while (bytesRead > 0);
 
