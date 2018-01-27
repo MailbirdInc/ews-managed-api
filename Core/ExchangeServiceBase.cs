@@ -75,6 +75,7 @@ namespace Microsoft.Exchange.WebServices.Data
         private int timeout = 100000;
         private bool traceEnabled;
         private bool sendClientLatencies = true;
+        private TraceFlags saveFlags = TraceFlags.All;
         private TraceFlags traceFlags = TraceFlags.All;
         private ITraceListener traceListener = new EwsTraceListener();
         private bool preAuthenticate;
@@ -264,6 +265,17 @@ namespace Microsoft.Exchange.WebServices.Data
         }
 
         /// <summary>
+        /// Determines whether saving is enabled for specified save flag(s).
+        /// </summary>
+        /// <param name="saveFlags">The save flags.</param>
+        /// <returns>True if saving is enabled for specified save flag(s).
+        /// </returns>
+        internal bool IsSaveEnabledFor(TraceFlags saveFlags)
+        {
+            return (this.SaveFlags & saveFlags) != 0;
+        }
+
+        /// <summary>
         /// Logs the specified string to the TraceListener if tracing is enabled.
         /// </summary>
         /// <param name="traceType">Kind of trace entry.</param>
@@ -317,8 +329,7 @@ namespace Microsoft.Exchange.WebServices.Data
         internal void ProcessHttpResponseHeaders(TraceFlags traceType, IEwsHttpWebResponse response)
         {
             this.TraceHttpResponseHeaders(traceType, response);
-
-            this.SaveHttpResponseHeaders(response.Headers);
+            this.SaveHttpResponseHeaders(traceType, response.Headers);
         }
 
         /// <summary>
@@ -341,27 +352,31 @@ namespace Microsoft.Exchange.WebServices.Data
         /// Save the HTTP response headers.
         /// </summary>
         /// <param name="headers">The response headers</param>
-        private void SaveHttpResponseHeaders(WebHeaderCollection headers)
+        /// <param name="saveType">Kind of save entry</param>
+        private void SaveHttpResponseHeaders(TraceFlags saveType, WebHeaderCollection headers)
         {
-            this.httpResponseHeaders.Clear();
-
-            foreach (string key in headers.AllKeys)
+            if (this.IsSaveEnabledFor(saveType))
             {
-                string existingValue;
+                this.httpResponseHeaders.Clear();
 
-                if (this.httpResponseHeaders.TryGetValue(key, out existingValue))
+                foreach (string key in headers.AllKeys)
                 {
-                    this.httpResponseHeaders[key] = existingValue + "," + headers[key];
-                }
-                else
-                {
-                    this.httpResponseHeaders.Add(key, headers[key]);
-                }
-            }
+                    string existingValue;
 
-            if (this.OnResponseHeadersCaptured != null)
-            {
-                this.OnResponseHeadersCaptured(headers);
+                    if (this.httpResponseHeaders.TryGetValue(key, out existingValue))
+                    {
+                        this.httpResponseHeaders[key] = existingValue + "," + headers[key];
+                    }
+                    else
+                    {
+                        this.httpResponseHeaders.Add(key, headers[key]);
+                    }
+                }
+
+                if (this.OnResponseHeadersCaptured != null)
+                {
+                    this.OnResponseHeadersCaptured(headers);
+                }
             }
         }
 
@@ -659,6 +674,23 @@ namespace Microsoft.Exchange.WebServices.Data
             set
             {
                 this.traceFlags = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the trace flags.
+        /// </summary>
+        /// <value>The trace flags.</value>
+        public TraceFlags SaveFlags
+        {
+            get
+            {
+                return this.saveFlags;
+            }
+
+            set
+            {
+                this.saveFlags = value;
             }
         }
 
